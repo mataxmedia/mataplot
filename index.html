@@ -36,6 +36,23 @@
       <div class="name-ed" id="nameEd" hidden></div>
     </section>
     <section class="panel">
+      <h2>Kanal</h2>
+      <div class="field"><label for="chOrder">Urutan penomoran</label>
+        <select id="chOrder"><option value="back">Per bottom, belakang ke depan</option><option value="front">Per bottom, depan ke belakang</option><option value="row">Baris demi baris, belakang ke depan</option></select></div>
+      <div class="field"><label for="chStart">Mulai dari kanal</label><input type="number" id="chStart" min="0" step="1" value="1"></div>
+      <label class="chk"><input type="checkbox" id="chSel"><span>Hanya lampu terpilih</span></label>
+      <button class="btn" id="bChNum">Nomori ulang kanal</button>
+      <label class="chk"><input type="checkbox" id="oDup"><span>Tandai kanal ganda di gambar</span></label>
+      <p class="hint" id="chDup"></p>
+      <p class="hint">Dalam satu bottom, lampu diurut kiri ke kanan menurut tampilan layar. Kanal ganda boleh disengaja, misalnya dua lampu satu dimmer.</p>
+    </section>
+    <section class="panel">
+      <h2>Template panggung</h2>
+      <div class="field"><label for="tplSel">Pilih template</label><select id="tplSel"></select></div>
+      <button class="btn" id="bTpl">Terapkan template</button>
+      <p class="hint">Mengganti ukuran panggung, bottom, dan teks. Lampu dihapus; lembar gambar dan pengaturan tampilan tetap. Bisa diurungkan.</p>
+    </section>
+    <section class="panel">
       <h2>Panggung</h2>
       <div class="row">
         <div class="field"><label for="stW">Lebar (m)</label><input type="number" id="stW" min="2" max="60" step="0.5"></div>
@@ -73,7 +90,7 @@
       <button class="btn" id="zOut" title="Perkecil" aria-label="Perkecil">&minus;</button>
       <button class="btn" id="zFit" title="Sesuaikan tampilan" aria-label="Sesuaikan tampilan">&#9635;</button>
     </div>
-    <div class="status"><span>Posisi <b id="stPos">&ndash;</b></span><span>Lampu <b id="stLamps">0</b></span><span>Bottom <b id="stBars">0</b></span><span id="stSel"></span></div>
+    <div class="status"><span>Posisi <b id="stPos">&ndash;</b></span><span>Lampu <b id="stLamps">0</b></span><span>Bottom <b id="stBars">0</b></span><span id="stDup"></span><span id="stSel"></span></div>
   </section>
 
   <aside class="col right">
@@ -108,11 +125,13 @@
       <div class="field"><label for="xPaper">Kertas PDF (lanskap)</label>
         <select id="xPaper"><option value="a3">A3</option><option value="a4">A4</option></select></div>
       <label class="chk"><input type="checkbox" id="xLegend" checked><span>Sertakan legenda dan blok judul</span></label>
+      <label class="chk"><input type="checkbox" id="xSched" checked><span>Sertakan jadwal instrumen di PDF (halaman 2 dst.)</span></label>
       <div class="exp-grid">
         <button class="btn primary" id="xPng">Unduh PNG</button>
         <button class="btn primary" id="xPdf">Unduh PDF</button>
       </div>
       <button class="btn" id="xSvg">Unduh SVG (vektor)</button>
+      <button class="btn" id="xCsv">Unduh CSV jadwal lampu</button>
       <p class="hint" id="xNote"></p>
     </section>
   </aside>
