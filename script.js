@@ -55,8 +55,8 @@ const MODELS={
   mbeam:[['Moving Beam 5R (120 W)',1.2],['Moving Beam 7R (230 W)',1.8],['Moving Beam 10R (280 W)',1.5]],
   practical:[['Lampu meja',0],['Lampu berdiri',0],['Lampu gantung (pendant)',0],['Lampu jalan / lentera',0]]
 };
-const LBD={back:{show:true,text:'BELAKANG PANGGUNG (UPSTAGE)',size:1},edge:{show:true,text:'TEPI PANGGUNG / GARIS PLASTER',size:1}};
-const lblOf=()=>({back:Object.assign({},LBD.back,S.lbl&&S.lbl.back),edge:Object.assign({},LBD.edge,S.lbl&&S.lbl.edge)});
+const LBD={back:{show:true,text:'BELAKANG PANGGUNG (UPSTAGE)',size:1},edge:{show:true,text:'TEPI PANGGUNG / GARIS PLASTER',size:1},aud:{show:true,text:'PENONTON',size:1},cl:{show:true,text:'GARIS TENGAH (CL)',size:1}};
+const lblOf=()=>{const o={};for(const k in LBD)o[k]=Object.assign({},LBD[k],S.lbl&&S.lbl[k]);return o};
 const setLbl=(k,key,v)=>{const c=lblOf();c[k][key]=v;S.lbl=c};
 const tname=k=>(S&&S.names&&S.names[k])||TYPES[k].name;
 const tipeOf=l=>{const m=MODELS[l.type];return m&&l.tipe?m.find(x=>x[0]===l.tipe)||null:null};
@@ -108,7 +108,7 @@ let S, sel=[], tool='select', armType=null, idc=0;
 const today=()=>new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
 function blank(){
   return {seq:0,stage:{w:10,d:7},
-    doc:{produksi:'Judul Pertunjukan',venue:'Gedung Kesenian',perancang:'',tanggal:today(),nomor:'LX-01',fontJudul:'',sizeJudul:0,fontTempat:'',sizeTempat:0},
+    doc:{judulBlok:'DENAH TATA CAHAYA',produksi:'Judul Pertunjukan',venue:'Gedung Kesenian',perancang:'',tanggal:today(),nomor:'LX-01',fontJudul:'',sizeJudul:0,fontTempat:'',sizeTempat:0},
     opt:{snap:0.25,sym:1,beams:true,grid:true,ch:true,barNames:false,gridSize:1},names:{},lbl:JSON.parse(JSON.stringify(LBD)),bars:[],lamps:[],texts:[]};
 }
 const uid=p=>p+(++S.seq);
@@ -170,11 +170,11 @@ function worldMarkup(P,o){
     h+=`<path d="${g}" style="stroke:${P.grid};stroke-width:.015;fill:none"/>`;
   }
   h+=`<path d="M${W/2} -0.7V${D+1.1}" stroke-dasharray=".5 .12 .08 .12" style="stroke:${P.soft};stroke-width:.025;fill:none"/>`;
-  h+=txt(W/2+0.12,D+1.35,0.24,'GARIS TENGAH (CL)',P,{c:P.soft,ls:'.03',a:'middle'});
   const lb=lblOf();
+  if(lb.cl.show&&lb.cl.text) h+=txt(W/2+0.12,D+1.35,0.24*lb.cl.size,lb.cl.text,P,{c:P.soft,ls:'.03',a:'middle'});
   if(lb.back.show&&lb.back.text) h+=txt(W/2,r2(0.29+0.26*lb.back.size),0.26*lb.back.size,lb.back.text,P,{c:P.soft,ls:'.06',a:'middle'});
   if(lb.edge.show&&lb.edge.text) h+=txt(W-0.15,D-0.18,0.24*lb.edge.size,lb.edge.text,P,{c:P.soft,ls:'.04',a:'end'});
-  h+=txt(W/2,b.y1-0.4,0.5,'PENONTON',P,{c:P.soft,ls:'.25',a:'middle',w:600});
+  if(lb.aud.show&&lb.aud.text) h+=txt(W/2,b.y1-0.4,0.5*lb.aud.size,lb.aud.text,P,{c:P.soft,ls:'.25',a:'middle',w:600});
   /* dimensi */
   h+=`<path d="M0 -1.3H${W}M0 -1.15V-1.45M${W} -1.15V-1.45M-1.3 0V${D}M-1.15 0H-1.45M-1.15 ${D}H-1.45" style="stroke:${P.soft};stroke-width:.025;fill:none"/>`;
   h+=txt(W/2,-1.4,0.26,fmt(W)+' m',P,{a:'middle',mono:1,c:P.soft});
@@ -273,10 +273,11 @@ function fillFonts(){
   $('#dProdFont').innerHTML=h; $('#dVenueFont').innerHTML=h;
 }
 
-/* ---------- Lembar gambar untuk ekspor (A3 lanskap, 1485 x 1050 satuan) ---------- */
+/* ---------- Lembar gambar untuk ekspor (lanskap, 1485 x 1050 satuan; rasio sama dengan A3 dan A4) ---------- */
 const SW=1485, SH=1050;
 function fitSize(s,width,max){return Math.min(max,width/(Math.max(1,s.length)*0.5))}
-function sheetSVG(legend){
+function sheetSVG(legend,paper){
+  paper=paper==='a4'?'a4':'a3'; const paperW=paper==='a4'?297:420;
   const P=PRINT, b=itemBounds(true), bw=b.x1-b.x0, bh=b.y1-b.y0;
   const reg=legend?{x:30,y:30,w:1125,h:850}:{x:22,y:22,w:SW-44,h:SH-44};
   const s=Math.min(reg.w/bw,reg.h/bh);
@@ -290,7 +291,7 @@ function sheetSVG(legend){
   const sx=reg.x+14, sy=reg.y+reg.h-16;
   o+=`<g font-family="${P.mono}" font-size="12" fill="${P.ink}"><rect x="${sx}" y="${sy}" width="${s}" height="7" fill="${P.ink}"/><rect x="${sx+s}" y="${sy}" width="${s}" height="7" fill="#fff" stroke="${P.ink}" stroke-width="1"/><text x="${sx}" y="${sy-5}">0</text><text x="${sx+s-3}" y="${sy-5}">1</text><text x="${sx+2*s-3}" y="${sy-5}">2 m</text></g>`;
   if(legend){
-    const ratio=Math.round(1000/(s*(420/SW))/5)*5;
+    const ratio=Math.max(1,Math.round(1000/(s*(paperW/SW))/5)*5);
     const lx=1178, F=P.font, M=P.mono;
     o+=`<line x1="1165" y1="30" x2="1165" y2="880" stroke="${P.major}" stroke-width="1"/>`;
     o+=`<text x="${lx}" y="50" font-family="${F}" font-size="22" font-weight="700" letter-spacing="2" fill="${P.ink}">LEGENDA</text>`;
@@ -316,11 +317,11 @@ function sheetSVG(legend){
         y+=30;
       }
     }
-    const note=['Dibuat menggunakan','aplikasi web Mataxplot.'];
+    const note=['Dibuat menggunakan','aplikasi web Mataplot.'];
     let ny=Math.max(y+24,740);
     for(const t of note){o+=`<text x="${lx}" y="${ny}" font-family="${F}" font-size="15" fill="${P.soft}">${esc(t)}</text>`;ny+=20}
     /* blok judul */
-    const d=S.doc, by=900, bh2=135, cells=[['DENAH TATA CAHAYA',d.produksi,500],['TEMPAT',d.venue,260],['PENATA CAHAYA',d.perancang||'-',240],['TANGGAL',d.tanggal,170],['SKALA (A3)','1 : '+ratio,140],['NO. GAMBAR',d.nomor,145]];
+    const d=S.doc, by=900, bh2=135, cells=[[(d.judulBlok||'').trim()||'DENAH TATA CAHAYA',d.produksi,500],['TEMPAT',d.venue,260],['PENATA CAHAYA',d.perancang||'-',240],['TANGGAL',d.tanggal,170],['SKALA ('+paper.toUpperCase()+')','1 : '+ratio,140],['NO. GAMBAR',d.nomor,145]];
     o+=`<line x1="15" y1="${by}" x2="${SW-15}" y2="${by}" stroke="${P.ink}" stroke-width="2"/>`;
     let cx=15;
     cells.forEach((c,i)=>{
@@ -336,10 +337,7 @@ function sheetSVG(legend){
 }
 
 /* ---------- Ekspor ---------- */
-let DL=null;
-(async()=>{try{if(window.claude&&window.claude.use) DL=await window.claude.use('downloads')}catch(e){DL=null}
-  $('#xNote').textContent=DL?'Berkas disimpan lewat jendela konfirmasi unduhan.':'Berkas diunduh langsung lewat peramban.';
-})();
+$('#xNote').textContent='Berkas diunduh langsung lewat peramban.';
 let toastT=0;
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},3200)}
 const slug=()=>((S.doc.produksi||'plot').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'plot')+'-'+((S.doc.nomor||'lx').toLowerCase().replace(/[^a-z0-9]+/g,'-'));
@@ -353,20 +351,14 @@ function rasterize(svg,pxW){
   });
 }
 const toBlob=c=>new Promise(r=>c.toBlob(r,'image/png'));
-async function saveOut(name,data){
-  if(!DL){
-    /* unduhan biasa lewat peramban (dipakai saat berkas dibuka di luar claude.ai) */
-    try{
-      const type=/\.pdf$/.test(name)?'application/pdf':/\.png$/.test(name)?'image/png':/\.svg$/.test(name)?'image/svg+xml':'application/json';
-      const blob=data instanceof Blob?data:new Blob([data],{type});
-      const u=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(u),5000); toast('Berkas diunduh.');
-    }catch(e){toast('Unduhan gagal.')}
-    return;
-  }
-  try{const r=await DL.save({filename:name,data}); toast(r&&r.status==='saved'?'Berkas disimpan.':'Berkas dikirim.')}
-  catch(e){ if(e&&e.code==='declined') toast('Unduhan dibatalkan.'); else toast('Unduhan gagal: '+((e&&e.code)||'tidak diketahui')) }
+function saveOut(name,data){
+  try{
+    const type=/\.pdf$/.test(name)?'application/pdf':/\.png$/.test(name)?'image/png':/\.svg$/.test(name)?'image/svg+xml':'application/json';
+    const blob=data instanceof Blob?data:new Blob([data],{type});
+    const u=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),5000); toast('Berkas diunduh.');
+  }catch(e){toast('Unduhan gagal.')}
 }
 /* Penulis PDF sederhana: satu halaman berisi satu gambar JPEG (tanpa pustaka luar) */
 function dataUrlToBytes(u){const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
@@ -390,48 +382,41 @@ function makePdf(jpg,iw,ih,pw,ph){
   return out;
 }
 async function exportKind(kind){
-  const legend=$('#xLegend').checked, svg=sheetSVG(legend), base=slug();
+  const legend=$('#xLegend').checked, paper=$('#xPaper').value, svg=sheetSVG(legend,paper), base=slug();
   try{
-    if(kind==='svg'){ await saveOut(base+'.svg',svg); return }
+    if(kind==='svg'){ saveOut(base+'.svg',svg); return }
     if(kind==='png'){
       const c=await rasterize(svg,+$('#xRes').value);
-      await saveOut(base+'.png',await toBlob(c)); return;
+      saveOut(base+'.png',await toBlob(c)); return;
     }
     if(kind==='pdf'){
-      const paper=$('#xPaper').value, pt=paper==='a4'?[841.89,595.28]:[1190.55,841.89];
+      const pt=paper==='a4'?[841.89,595.28]:[1190.55,841.89];
       const c=await rasterize(svg,4200);
       const jpg=dataUrlToBytes(c.toDataURL('image/jpeg',0.95));
-      await saveOut(base+'.pdf',makePdf(jpg,c.width,c.height,pt[0],pt[1]).buffer);
+      saveOut(base+'.pdf',makePdf(jpg,c.width,c.height,pt[0],pt[1]).buffer);
     }
   }catch(e){toast('Ekspor gagal. Coba kurangi resolusi.')}
 }
 
-/* ---------- Riwayat, simpan otomatis ---------- */
-const KEY='plot-cahaya-v1';
-let cur='', undo=[], redo=[];
-/* Tanpa penyimpanan otomatis: setiap dibuka atau disegarkan, aplikasi selalu mulai dari halaman kosong.
+/* ---------- Riwayat ---------- */
+/* Tanpa penyimpanan otomatis: setiap dibuka atau disegarkan, aplikasi mulai dari halaman kosong.
    Pekerjaan hanya tersimpan lewat tombol "Simpan proyek". */
-function persist(){}
-function clearOldStore(){
-  try{localStorage.removeItem(KEY)}catch(e){}
-  try{sessionStorage.removeItem(KEY)}catch(e){}
-  try{if(typeof window.name==='string'&&window.name.indexOf('MCX1:')===0) window.name=''}catch(e){}
-}
+let cur='', undo=[], redo=[];
 function commit(){
   const now=JSON.stringify(S);
   if(now===cur) return;
   undo.push(cur); if(undo.length>80) undo.shift();
-  redo=[]; cur=now; persist(); updUndo();
+  redo=[]; cur=now; updUndo();
 }
 function restore(str){
-  S=JSON.parse(str); cur=str; persist();
+  S=JSON.parse(str); cur=str;
   sel=sel.filter(id=>[...S.bars,...S.lamps,...S.texts].some(x=>x.id===id));
   syncControls(); render(); buildInspector(); updUndo();
 }
 function updUndo(){$('#bUndo').disabled=!undo.length;$('#bRedo').disabled=!redo.length}
 function doUndo(){if(!undo.length)return;redo.push(cur);restore(undo.pop())}
 function doRedo(){if(!redo.length)return;undo.push(cur);restore(redo.pop())}
-function resetDoc(next){S=next;undo=[];redo=[];cur=JSON.stringify(S);persist();sel=[];syncControls();fit();render();buildInspector();updUndo()}
+function resetDoc(next){S=next;undo=[];redo=[];cur=JSON.stringify(S);sel=[];syncControls();fit();render();buildInspector();updUndo()}
 
 /* ---------- Tampilan dan koordinat ---------- */
 const cv=$('#cv'), world=$('#world');
@@ -560,7 +545,7 @@ function spread(bar){
 }
 function delSel(){
   if(!sel.length) return;
-  S.lamps=S.lamps.filter(l=>!sel.includes(l.id)&&!(l.bar&&sel.includes(l.bar)&&false));
+  S.lamps=S.lamps.filter(l=>!sel.includes(l.id));
   S.bars=S.bars.filter(b=>!sel.includes(b.id)); S.texts=S.texts.filter(t=>!sel.includes(t.id));
   S.lamps.forEach(l=>{if(l.bar&&!S.bars.some(b=>b.id===l.bar)) l.bar=''});
   sel=[]; commit(); render(); buildInspector();
@@ -682,11 +667,11 @@ document.addEventListener('click',e=>{
 document.addEventListener('dragstart',e=>{const l=e.target.closest&&e.target.closest('.lamp-btn');if(l){e.dataTransfer.setData('text/plain',l.dataset.type);e.dataTransfer.effectAllowed='copy'}});
 function syncControls(){
   {const d=S.doc;$('#dProdFont').value=d.fontJudul||'';$('#dProdSz').value=d.sizeJudul||0;$('#dVenueFont').value=d.fontTempat||'';$('#dVenueSz').value=d.sizeTempat||0}
-  {const lb=lblOf();$('#lbBackTxt').value=lb.back.text;$('#lbBackShow').checked=!!lb.back.show;$('#lbBackSz').value=lb.back.size;$('#lbEdgeTxt').value=lb.edge.text;$('#lbEdgeShow').checked=!!lb.edge.show;$('#lbEdgeSz').value=lb.edge.size}
+  {const lb=lblOf();$('#lbBackTxt').value=lb.back.text;$('#lbBackShow').checked=!!lb.back.show;$('#lbBackSz').value=lb.back.size;$('#lbEdgeTxt').value=lb.edge.text;$('#lbEdgeShow').checked=!!lb.edge.show;$('#lbEdgeSz').value=lb.edge.size;$('#lbAudTxt').value=lb.aud.text;$('#lbAudShow').checked=!!lb.aud.show;$('#lbAudSz').value=lb.aud.size;$('#lbClTxt').value=lb.cl.text;$('#lbClShow').checked=!!lb.cl.show;$('#lbClSz').value=lb.cl.size}
   $('#gridSz').value=S.opt.gridSize||1; refreshLampPalette(); buildNameEd();
   $('#stW').value=S.stage.w;$('#stD').value=S.stage.d;$('#snap').value=String(S.opt.snap);$('#sym').value=S.opt.sym;
   $('#oGrid').checked=S.opt.grid;$('#oBeam').checked=S.opt.beams;$('#oCh').checked=S.opt.ch;$('#oBarNames').checked=!!S.opt.barNames;
-  $('#dProd').value=S.doc.produksi;$('#dVenue').value=S.doc.venue;$('#dDes').value=S.doc.perancang;$('#dDate').value=S.doc.tanggal;$('#dNo').value=S.doc.nomor;
+  $('#dBlok').value=S.doc.judulBlok==null?'DENAH TATA CAHAYA':S.doc.judulBlok;$('#dProd').value=S.doc.produksi;$('#dVenue').value=S.doc.venue;$('#dDes').value=S.doc.perancang;$('#dDate').value=S.doc.tanggal;$('#dNo').value=S.doc.nomor;
 }
 function bindInput(id,fn,doFit){const e=$('#'+id);e.addEventListener('input',()=>{fn(e);render()});e.addEventListener('change',()=>{commit();if(doFit)fit()})}
 bindInput('stW',e=>{S.stage.w=clamp(num(e.value,10),2,60)},true);
@@ -695,6 +680,8 @@ bindInput('snap',e=>{S.opt.snap=num(e.value,0)});
 bindInput('sym',e=>{S.opt.sym=num(e.value,1)});
 bindInput('lbBackTxt',e=>setLbl('back','text',e.value));bindInput('lbBackShow',e=>setLbl('back','show',e.checked));bindInput('lbBackSz',e=>setLbl('back','size',num(e.value,1)));
 bindInput('lbEdgeTxt',e=>setLbl('edge','text',e.value));bindInput('lbEdgeShow',e=>setLbl('edge','show',e.checked));bindInput('lbEdgeSz',e=>setLbl('edge','size',num(e.value,1)));
+bindInput('lbAudTxt',e=>setLbl('aud','text',e.value));bindInput('lbAudShow',e=>setLbl('aud','show',e.checked));bindInput('lbAudSz',e=>setLbl('aud','size',num(e.value,1)));
+bindInput('lbClTxt',e=>setLbl('cl','text',e.value));bindInput('lbClShow',e=>setLbl('cl','show',e.checked));bindInput('lbClSz',e=>setLbl('cl','size',num(e.value,1)));
 bindInput('gridSz',e=>{S.opt.gridSize=clamp(num(e.value,1),0.1,10)});
 $('#bNames').onclick=()=>{const e=$('#nameEd');e.hidden=!e.hidden;$('#bNames').setAttribute('aria-expanded',String(!e.hidden));$('#bNames').textContent=e.hidden?'Kustom nama jenis lampu':'Tutup kustom nama'};
 $('#nameEd').addEventListener('input',e=>{
@@ -708,7 +695,7 @@ $('#nameEd').addEventListener('click',e=>{if(e.target.id==='bNamesReset'){S.name
 bindInput('oGrid',e=>{S.opt.grid=e.checked});bindInput('oBeam',e=>{S.opt.beams=e.checked});bindInput('oCh',e=>{S.opt.ch=e.checked});bindInput('oBarNames',e=>{S.opt.barNames=e.checked});
 bindInput('dProdFont',e=>{S.doc.fontJudul=e.value});bindInput('dProdSz',e=>{S.doc.sizeJudul=clamp(num(e.value,0),0,80)});
 bindInput('dVenueFont',e=>{S.doc.fontTempat=e.value});bindInput('dVenueSz',e=>{S.doc.sizeTempat=clamp(num(e.value,0),0,80)});
-bindInput('dProd',e=>{S.doc.produksi=e.value});bindInput('dVenue',e=>{S.doc.venue=e.value});bindInput('dDes',e=>{S.doc.perancang=e.value});
+bindInput('dBlok',e=>{S.doc.judulBlok=e.value});bindInput('dProd',e=>{S.doc.produksi=e.value});bindInput('dVenue',e=>{S.doc.venue=e.value});bindInput('dDes',e=>{S.doc.perancang=e.value});
 bindInput('dDate',e=>{S.doc.tanggal=e.value});bindInput('dNo',e=>{S.doc.nomor=e.value});
 
 $('#bUndo').onclick=doUndo;$('#bRedo').onclick=doRedo;
@@ -724,7 +711,7 @@ $('#fOpen').addEventListener('change',e=>{
     const d=JSON.parse(r.result); if(!d||!d.stage||!Array.isArray(d.lamps)||!Array.isArray(d.bars)) throw 0;
     const n=Object.assign(blank(),d); n.opt=Object.assign(blank().opt,d.opt||{}); n.doc=Object.assign(blank().doc,d.doc||{}); n.texts=d.texts||[];
     resetDoc(n); toast('Proyek dibuka.');
-  }catch(x){toast('Berkas bukan proyek MATACAHAYA yang valid.')}};
+  }catch(x){toast('Berkas bukan proyek MATAPLOT yang valid.')}};
   r.readAsText(f); e.target.value='';
 });
 
@@ -745,11 +732,19 @@ document.addEventListener('keydown',e=>{
     commit();render();buildInspector();
   }
 });
-window.addEventListener('resize',()=>{});
+let rsT=0;
+window.addEventListener('resize',()=>{
+  cancelAnimationFrame(rsT);
+  rsT=requestAnimationFrame(()=>{
+    const r=cv.getBoundingClientRect(); if(!r.width||!r.height) return;
+    const asp=r.width/r.height, cx=view.x+view.w/2, cy=view.y+view.h/2;
+    const w=Math.max(view.w,view.h*asp), h=w/asp;
+    view={x:cx-w/2,y:cy-h/2,w:w,h:h}; applyView();
+  });
+});
 
 /* ---------- Mulai ---------- */
 function init(){
-  clearOldStore();
   S=blank();
   cur=JSON.stringify(S); undo=[]; redo=[];
   fillFonts(); buildPalette(); syncControls(); setTool('select'); buildInspector(); updUndo();
