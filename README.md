@@ -4,7 +4,7 @@
 
 - Alamat aplikasi: <https://mataxmedia.github.io/mataplot/>
 - Pembuat: Mataxmedia (dibuat dengan bantuan Claude)
-- Versi: halaman menampilkan label v.0.1 pada judul tab dan v.0.2 pada tajuk aplikasi.
+- Versi: halaman menampilkan label v.0.1 pada judul tab dan v.0.1 pada tajuk aplikasi.
 
 > **Catatan:** Tutorial ini disusun dari struktur dan label yang tampil di halaman aplikasi. Nama persis beberapa tombol atau jenis lampu bisa sedikit berbeda karena aplikasi masih berkembang. Bagian yang bersifat dugaan diberi tanda *(cek di aplikasi)*.
 
