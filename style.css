@@ -111,3 +111,27 @@ button,input,select{font:inherit; color:inherit}
   .lamps{grid-template-columns:repeat(2,1fr)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+
+/* Daya, simpan otomatis, dan dialog */
+.pw-box{max-height:240px; overflow:auto; font-size:12px; border:1px solid var(--line); background:var(--raised); padding:6px 8px; border-radius:3px; display:flex; flex-direction:column; gap:2px}
+.pw-box:empty{display:none}
+.pw-t,.pw-r{display:flex; justify-content:space-between; gap:8px}
+.pw-r{font-family:var(--f-mono)}
+.pw-r.bad,.pw-r.bad span{color:var(--danger)}
+.pw-h{font:600 11px var(--f-mono); letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-top:6px}
+.status b.bad{color:var(--danger)}
+.chk.auto{padding:0 4px}
+#autoNote{font:400 11px var(--f-mono); color:var(--ink-soft); align-self:center}
+.overlay .box h3{font-size:22px}
+.overlay .box p{margin:0; max-width:46ch}
+
+/* Layar sentuh: sasaran sentuh lebih besar */
+@media (pointer:coarse){
+  .btn{padding:9px 13px}
+  .btn.sm{padding:8px 11px}
+  .tool{padding:10px 4px}
+  .lamp-btn{padding:8px 7px}
+  .zoom .btn{width:44px; height:44px}
+  .field input,.field select{padding:9px 8px}
+  .chk{padding:3px 0}
+}

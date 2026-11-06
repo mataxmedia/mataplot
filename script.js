@@ -31,6 +31,7 @@ const TYPES={
   practical:{name:'Lampu Praktikal',half:0,def:0}
 };
 const TKEYS=Object.keys(TYPES);
+const COARSE=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches), HK=COARSE?1.8:1;
 /* Perpustakaan tipe: [nama tipe, setengah sudut sorot (derajat)] per jenis lampu */
 const MODELS={
   par:[['PAR 30',15],['PAR 38',15],['PAR 56',12],['PAR 64 CP60 (sempit)',5],['PAR 64 CP61 (medium)',10],['PAR 64 CP62 (lebar)',22]],
@@ -63,6 +64,24 @@ const tipeOf=l=>{const m=MODELS[l.type];return m&&l.tipe?m.find(x=>x[0]===l.tipe
 const halfOf=l=>{const t=tipeOf(l);return t?t[1]:TYPES[l.type].half};
 const GELS=[['Tanpa gel',''],['Hangat','#ffcf8a'],['Amber','#ffa726'],['Merah','#e53935'],['Magenta','#c2185b'],['Lavender','#8e6fe0'],['Biru','#2f5fe0'],['Cyan','#14b4c8'],['Hijau','#25a55f'],['Dingin','#a9cdfb']];
 const gelName=c=>{const g=GELS.find(x=>x[1]===c);return g?g[0]:c};
+
+/* ---------- Daya lampu (watt) ---------- */
+/* Bawaan per jenis lampu bila tipe belum dipilih, dan penyesuaian untuk tipe yang namanya tidak memuat daya. */
+const TW={par:500,fresnel:650,profile:750,flood:500,led:100,moving:250,follow:575,blinder:1300,pc:650,ledprofile:150,ledfresnel:150,ledwash:150,ledbar:40,sunstrip:300,strobe:1000,scoop:500,cycflood:500,pinspot:20,mwash:300,mbeam:230,practical:60};
+const MW={'PAR 30':75,'PAR 38':150,'PAR 56':300,'PAR 64 CP60 (sempit)':1000,'PAR 64 CP61 (medium)':1000,'PAR 64 CP62 (lebar)':1000,'Blinder 2 lampu':1300,'Blinder 4 lampu':2600,'LED Pixel Bar 1 m':50,'LED Scoop':100,'LED Cyc asimetris':150,'LED Par IP65 outdoor':100};
+function parseWatt(n){
+  let m=n.match(/(\d+)\s*x\s*(\d+(?:[.,]\d+)?)\s*W\b/i); if(m) return Math.round(+m[1]*parseFloat(m[2].replace(',','.')));
+  m=n.match(/(\d+(?:[.,]\d+)?)\s*kW/i); if(m) return Math.round(parseFloat(m[1].replace(',','.'))*1000);
+  m=n.match(/(\d+(?:[.,]\d+)?)\s*W\b/i); if(m) return Math.round(parseFloat(m[1].replace(',','.')));
+  return null;
+}
+function wattAuto(l){
+  const t=tipeOf(l);
+  if(t){ if(MW[t[0]]!=null) return MW[t[0]]; const p=parseWatt(t[0]); if(p!=null) return p }
+  return TW[l.type]||0;
+}
+const wattOf=l=>{const w=l.watt;return (w!=null&&w!==''&&isFinite(+w))?Math.max(0,+w):wattAuto(l)};
+const fmtW=w=>w>=1000?(Math.round(w/100)/10).toString().replace('.',',')+' kW':Math.round(w)+' W';
 
 /* Bentuk simbol dalam koordinat lokal; lampu mengarah ke +y (ke arah penonton) pada rotasi 0 */
 function symShape(t){
@@ -109,7 +128,7 @@ const today=()=>new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long
 function blank(){
   return {seq:0,stage:{w:10,d:7},
     doc:{judulBlok:'DENAH TATA CAHAYA',produksi:'Judul Pertunjukan',venue:'Gedung Kesenian',perancang:'',tanggal:today(),nomor:'LX-01',fontJudul:'',sizeJudul:0,fontTempat:'',sizeTempat:0},
-    opt:{snap:0.25,sym:1,beams:true,grid:true,ch:true,barNames:false,gridSize:1,dupMark:true},names:{},lbl:JSON.parse(JSON.stringify(LBD)),bars:[],lamps:[],texts:[]};
+    opt:{snap:0.25,sym:1,beams:true,grid:true,ch:true,barNames:false,gridSize:1,dupMark:true,dimCap:2000,supply:0},names:{},lbl:JSON.parse(JSON.stringify(LBD)),bars:[],lamps:[],texts:[]};
 }
 const uid=p=>p+(++S.seq);
 const nextCh=()=>S.lamps.reduce((m,l)=>Math.max(m,l.ch||0),0)+1;
@@ -270,12 +289,12 @@ function worldMarkup(P,o){
       const d=1.5*lsz(l)+0.5, th=l.rot*Math.PI/180, hx=l.x-Math.sin(th)*d, hy=l.y+Math.cos(th)*d;
       h+=`<circle cx="${l.x}" cy="${l.y}" r="${r2(0.9*lsz(l))}" fill="none" stroke-dasharray=".1 .08" style="stroke:${P.accent};stroke-width:.03;pointer-events:none"/>`+
          `<line x1="${l.x}" y1="${l.y}" x2="${r2(hx)}" y2="${r2(hy)}" style="stroke:${P.accent};stroke-width:.025;pointer-events:none"/>`+
-         `<circle data-h="rot" data-id="${l.id}" cx="${r2(hx)}" cy="${r2(hy)}" r="${r2(0.17*S.opt.sym+0.05)}" style="fill:${P.accent};cursor:grab"/>`;
+         `<circle data-h="rot" data-id="${l.id}" cx="${r2(hx)}" cy="${r2(hy)}" r="${r2((0.17*S.opt.sym+0.05)*HK)}" style="fill:${P.accent};cursor:grab"/>`;
     }
     const br=S.bars.find(x=>x.id===id);
     if(br){
-      h+=`<circle data-h="p1" data-id="${br.id}" cx="${br.x1}" cy="${br.y1}" r=".2" style="fill:${P.accent};cursor:move"/>`+
-         `<circle data-h="p2" data-id="${br.id}" cx="${br.x2}" cy="${br.y2}" r=".2" style="fill:${P.accent};cursor:move"/>`;
+      h+=`<circle data-h="p1" data-id="${br.id}" cx="${br.x1}" cy="${br.y1}" r="${r2(0.2*HK)}" style="fill:${P.accent};cursor:move"/>`+
+         `<circle data-h="p2" data-id="${br.id}" cx="${br.x2}" cy="${br.y2}" r="${r2(0.2*HK)}" style="fill:${P.accent};cursor:move"/>`;
     }
   }
   if(o.draft){const d=o.draft;h+=`<line x1="${d.x1}" y1="${d.y1}" x2="${d.x2}" y2="${d.y2}" stroke-dasharray=".2 .1" style="stroke:${P.accent};stroke-width:.07;stroke-linecap:round;pointer-events:none"/>`}
@@ -410,22 +429,22 @@ function scheduleRows(){
   const L=S.lamps.slice().sort((a,b)=>((a.ch||1e9)-(b.ch||1e9))||(S.lamps.indexOf(a)-S.lamps.indexOf(b)));
   return L.map(l=>{
     const b=S.bars.find(z=>z.id===l.bar);
-    return {ch:l.ch||'',dim:l.dim||'',jenis:tname(l.type),tipe:l.tipe||'',gel:l.gel?gelName(l.gel):'',gelc:l.gel||'',bottom:b?(b.name||'Bottom'):'',h:b&&b.h?b.h:'',x:l.x,y:l.y,rot:l.rot||0,thr:l.throw,note:l.note||''};
+    return {ch:l.ch||'',dim:l.dim||'',jenis:tname(l.type),tipe:l.tipe||'',gel:l.gel?gelName(l.gel):'',gelc:l.gel||'',bottom:b?(b.name||'Bottom'):'',h:b&&b.h?b.h:'',x:l.x,y:l.y,rot:l.rot||0,thr:l.throw,note:l.note||'',w:wattOf(l)};
   });
 }
 function csvCell(v){v=String(v==null?'':v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function exportCsv(){
   if(!S.lamps.length){toast('Belum ada lampu untuk dijadwalkan.');return}
   const dec=v=>String(v).replace('.',',');
-  const head=['Kanal','Dimmer / alamat','Jenis lampu','Tipe','Gel','Bottom','Tinggi pasang (m)','Posisi X (m)','Posisi Y (m)','Rotasi (derajat)','Jarak sorot (m)','Catatan fokus'];
-  const lines=[head].concat(scheduleRows().map(r=>[r.ch,r.dim,r.jenis,r.tipe,r.gel,r.bottom,r.h===''?'':dec(r.h),dec(r.x),dec(r.y),dec(r.rot),dec(r.thr),r.note]));
+  const head=['Kanal','Dimmer / alamat','Jenis lampu','Tipe','Gel','Bottom','Tinggi pasang (m)','Daya (W)','Posisi X (m)','Posisi Y (m)','Rotasi (derajat)','Jarak sorot (m)','Catatan fokus'];
+  const lines=[head].concat(scheduleRows().map(r=>[r.ch,r.dim,r.jenis,r.tipe,r.gel,r.bottom,r.h===''?'':dec(r.h),r.w,dec(r.x),dec(r.y),dec(r.rot),dec(r.thr),r.note]));
   saveOut(slug()+'-jadwal.csv',new Blob(['\uFEFF'+lines.map(r=>r.map(csvCell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
 }
 function scheduleSVGs(){
-  const P=PRINT, F=P.font, M=P.mono, d=S.doc, rows=scheduleRows();
+  const P=PRINT, F=P.font, M=P.mono, d=S.doc, rows=scheduleRows(), tw=rows.reduce((a,r)=>a+r.w,0);
   const top=140, rh=24, per=Math.max(1,Math.floor((SH-top-70)/rh)), pages=Math.max(1,Math.ceil(rows.length/per));
   const cut=(s,w,sz,mono)=>{s=String(s==null?'':s);const mxc=Math.max(1,Math.floor((w-14)/(sz*(mono?0.6:0.5))));return s.length>mxc?s.slice(0,Math.max(1,mxc-1))+'\u2026':s};
-  const cols=[['NO',45,'no',1],['KANAL',70,'ch',1],['DIMMER / ALAMAT',130,'dim',1],['JENIS LAMPU',210,'jenis',0],['TIPE',240,'tipe',0],['GEL',170,'gel',0],['BOTTOM',200,'bottom',0],['TINGGI (m)',90,'h',1],['CATATAN FOKUS',250,'note',0]];
+  const cols=[['NO',45,'no',1],['KANAL',70,'ch',1],['DIMMER / ALAMAT',130,'dim',1],['JENIS LAMPU',210,'jenis',0],['TIPE',200,'tipe',0],['GEL',170,'gel',0],['BOTTOM',200,'bottom',0],['TINGGI (m)',90,'h',1],['DAYA (W)',80,'w',1],['CATATAN FOKUS',210,'note',0]];
   const out=[];
   for(let p=0;p<pages;p++){
     let o=`<svg xmlns="http://www.w3.org/2000/svg" width="${SW}" height="${SH}" viewBox="0 0 ${SW} ${SH}"><rect width="${SW}" height="${SH}" fill="#ffffff"/>`;
@@ -452,7 +471,7 @@ function scheduleSVGs(){
     });
     o+=`<line x1="40" y1="${top+slice.length*rh}" x2="${x}" y2="${top+slice.length*rh}" stroke="${P.major}" stroke-width="1"/>`;
     o+=`<text x="40" y="${SH-30}" font-family="${F}" font-size="14" fill="${P.soft}">Dibuat menggunakan aplikasi web Mataplot.</text>`;
-    if(p===pages-1) o+=`<text x="${x}" y="${SH-30}" text-anchor="end" font-family="${F}" font-size="18" font-weight="700" fill="${P.ink}">Total ${rows.length} lampu</text>`;
+    if(p===pages-1) o+=`<text x="${x}" y="${SH-30}" text-anchor="end" font-family="${F}" font-size="18" font-weight="700" fill="${P.ink}">Total ${rows.length} lampu  |  ${esc(fmtW(tw))}</text>`;
     out.push(o+'</svg>');
   }
   return out;
@@ -502,25 +521,61 @@ async function exportKind(kind){
   }catch(e){toast('Ekspor gagal. Coba kurangi resolusi.')}
 }
 
+/* ---------- Simpan otomatis (opsional, di peramban ini) ---------- */
+const AK_STATE='mataplot-autosave-v1', AK_PREF='mataplot-pref-v1';
+let autoOn=false, autoReady=false, autoT=0;
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
+const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
+const hasContent=x=>!!(x&&((x.lamps&&x.lamps.length)||(x.bars&&x.bars.length)||(x.texts&&x.texts.length)));
+function autoSaveNow(){
+  clearTimeout(autoT); autoT=0;
+  if(!autoOn||!autoReady) return;
+  const ok=lsSet(AK_STATE,JSON.stringify({t:Date.now(),s:S})), n=$('#autoNote');
+  if(!ok){autoOn=false;$('#oAuto').checked=false;n.textContent='';toast('Penyimpanan peramban tidak tersedia atau penuh. Simpan otomatis dimatikan.');return}
+  n.textContent='Tersimpan '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+}
+function autoQueue(){if(!autoOn||!autoReady) return; clearTimeout(autoT); autoT=setTimeout(autoSaveNow,700)}
+function setAuto(on){
+  autoOn=on; lsSet(AK_PREF,JSON.stringify({auto:on}));
+  if(on){autoReady=true; autoSaveNow(); if(autoOn) toast('Simpan otomatis aktif: salinan proyek disimpan di peramban ini.')}
+  else{lsDel(AK_STATE); $('#autoNote').textContent=''; toast('Simpan otomatis mati. Salinan di peramban dihapus.')}
+}
+function loadProject(d){
+  if(!d||!d.stage||!Array.isArray(d.lamps)||!Array.isArray(d.bars)) throw 0;
+  const n=Object.assign(blank(),d); n.opt=Object.assign(blank().opt,d.opt||{}); n.doc=Object.assign(blank().doc,d.doc||{}); n.texts=d.texts||[];
+  return n;
+}
+function askRestore(saved){
+  const ov=$('#ov'), s=saved.s;
+  const dt=new Date(saved.t).toLocaleString('id-ID',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  ov.innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-labelledby="rsT"><h3 id="rsT">Pulihkan proyek?</h3><p>Ditemukan proyek yang tersimpan otomatis pada ${esc(dt)}: &ldquo;${esc((s.doc&&s.doc.produksi)||'tanpa judul')}&rdquo;, ${s.lamps.length} lampu, ${s.bars.length} bottom.</p><div class="btn-row"><button class="btn primary" id="rsYes">Pulihkan</button><button class="btn" id="rsNo">Mulai baru</button></div></div>`;
+  ov.hidden=false; $('#rsYes').focus();
+  const done=()=>{ov.hidden=true; ov.innerHTML=''; autoReady=true};
+  $('#rsYes').onclick=()=>{try{resetDoc(loadProject(s));done();autoSaveNow();toast('Proyek dipulihkan.')}catch(e){done();lsDel(AK_STATE);toast('Data simpanan rusak. Dimulai dari kosong.')}};
+  $('#rsNo').onclick=()=>{done();lsDel(AK_STATE);toast('Dimulai dari kosong.')};
+}
+window.addEventListener('pagehide',autoSaveNow);
+document.addEventListener('visibilitychange',()=>{if(document.hidden) autoSaveNow()});
+
 /* ---------- Riwayat ---------- */
-/* Tanpa penyimpanan otomatis: setiap dibuka atau disegarkan, aplikasi mulai dari halaman kosong.
-   Pekerjaan hanya tersimpan lewat tombol "Simpan proyek". */
+/* Simpan otomatis bersifat opsional (mati secara bawaan). Tanpa itu, pekerjaan hanya tersimpan lewat "Simpan proyek". */
 let cur='', undo=[], redo=[];
 function commit(){
   const now=JSON.stringify(S);
   if(now===cur) return;
   undo.push(cur); if(undo.length>80) undo.shift();
-  redo=[]; cur=now; updUndo();
+  redo=[]; cur=now; updUndo(); autoQueue();
 }
 function restore(str){
   S=JSON.parse(str); cur=str;
   sel=sel.filter(id=>[...S.bars,...S.lamps,...S.texts].some(x=>x.id===id));
-  syncControls(); render(); buildInspector(); updUndo();
+  syncControls(); render(); buildInspector(); updUndo(); autoQueue();
 }
 function updUndo(){$('#bUndo').disabled=!undo.length;$('#bRedo').disabled=!redo.length}
 function doUndo(){if(!undo.length)return;redo.push(cur);restore(undo.pop())}
 function doRedo(){if(!redo.length)return;undo.push(cur);restore(redo.pop())}
-function resetDoc(next){S=next;undo=[];redo=[];cur=JSON.stringify(S);sel=[];syncControls();fit();render();buildInspector();updUndo()}
+function resetDoc(next){S=next;undo=[];redo=[];cur=JSON.stringify(S);sel=[];syncControls();fit();render();buildInspector();updUndo();autoQueue()}
 
 /* ---------- Tampilan dan koordinat ---------- */
 const cv=$('#cv'), world=$('#world');
@@ -558,6 +613,43 @@ function render(){
   const lst=[...all].sort((a,b)=>a-b), txt=lst.slice(0,8).join(', ')+(lst.length>8?' ...':'');
   $('#stDup').innerHTML=mark&&lst.length?`Kanal ganda <b>${esc(txt)}</b>`:'';
   $('#chDup').textContent=lst.length?'Kanal dipakai lebih dari satu lampu: '+txt+'.':'Tidak ada kanal ganda.';
+  renderPower();
+}
+
+/* ---------- Ringkasan daya ---------- */
+let lastPw='';
+function powerInfo(){
+  const bars=new Map(), dims={}; let total=0, unas=0;
+  for(const l of S.lamps){
+    const w=wattOf(l); total+=w;
+    const b=S.bars.find(z=>z.id===l.bar), key=b?b.id:'';
+    if(!bars.has(key)) bars.set(key,{name:b?(b.name||'Bottom'):'Tanpa bottom',w:0});
+    bars.get(key).w+=w;
+    const d=(l.dim||'').trim();
+    if(d) dims[d]=(dims[d]||0)+w; else if(w>0) unas++;
+  }
+  return {total,bars:[...bars.values()],dims,unas};
+}
+function renderPower(){
+  const P=powerInfo(), cap=Math.max(0,num(S.opt.dimCap,2000)), sup=Math.max(0,num(S.opt.supply,0));
+  const dl=Object.keys(P.dims).sort((a,b)=>a.localeCompare(b,'id',{numeric:true}));
+  const overD=dl.filter(k=>cap>0&&P.dims[k]>cap), overT=sup>0&&P.total>sup, bad=overD.length>0||overT;
+  const amp=(Math.round(P.total/22)/10).toString().replace('.',',');
+  let h='';
+  if(S.lamps.length){
+    h+=`<div class="pw-t"><span>Total</span><b>${esc(fmtW(P.total))}</b></div><div class="pw-r"><span>Perkiraan arus (220 V)</span><span>${esc(amp)} A</span></div>`;
+    if(sup>0) h+=`<div class="pw-r${overT?' bad':''}"><span>${overT?'Melebihi batas total':'Sisa dari batas total'}</span><span>${esc(fmtW(Math.abs(sup-P.total)))}</span></div>`;
+    h+=`<div class="pw-h">Per bottom</div>`+P.bars.map(b=>`<div class="pw-r"><span>${esc(b.name)}</span><span>${esc(fmtW(b.w))}</span></div>`).join('');
+    if(dl.length) h+=`<div class="pw-h">Per dimmer</div>`+dl.map(k=>`<div class="pw-r${cap>0&&P.dims[k]>cap?' bad':''}"><span>${esc(k)}${cap>0&&P.dims[k]>cap?' (melebihi)':''}</span><span>${esc(fmtW(P.dims[k]))}</span></div>`).join('');
+    if(P.unas) h+=`<div class="pw-h">${P.unas} lampu belum punya dimmer</div>`;
+  }
+  if(h!==lastPw){lastPw=h;$('#pwBox').innerHTML=h}
+  const st=$('#stPw'); st.textContent=fmtW(P.total); st.className=bad?'bad':'';
+}
+function fillDim(){
+  let n=0; for(const l of S.lamps){if(!(l.dim||'').trim()&&l.ch>0){l.dim='D'+l.ch;n++}}
+  if(!n){toast('Tidak ada lampu tanpa dimmer yang punya nomor kanal.');return}
+  commit(); render(); buildInspector(); toast(n+' lampu diberi dimmer sesuai nomor kanal.');
 }
 
 /* ---------- Palet alat dan lampu ---------- */
@@ -609,6 +701,7 @@ function buildInspector(){
     h+=`<div class="field"><label for="iType">Jenis lampu</label><select id="iType">${TKEYS.map(k=>`<option value="${k}"${k===o.type?' selected':''}>${esc(tname(k))}</option>`).join('')}</select></div>`;
     h+=tipeField(o);
     h+=`<div class="row">${fld('Nomor kanal','iCh',o.ch,'type="number" min="0" step="1"')}${fld('Dimmer / alamat','iDim',o.dim,'class="mono"')}</div>`;
+    h+=fld('Daya (W), kosong = otomatis','iWatt',o.watt==null?'':o.watt,'type="number" min="0" step="10" placeholder="'+wattAuto(o)+'"');
     h+=`<div class="field"><label>Warna gel</label><div class="swatches">${GELS.map(g=>`<button class="sw${o.gel===g[1]?' on':''}" data-gel="${g[1]}" title="${g[0]}" aria-label="${g[0]}" style="background:${g[1]||'var(--stage)'}"></button>`).join('')}</div></div>`;
     h+=`<div class="row">${fld('Rotasi (derajat)','iRot',o.rot,'type="number" step="5"')}${fld('Jarak sorot (m)','iThr',o.throw,'type="number" min="0.5" step="0.5"')}</div>`;
     h+=`<div class="row">${fld('Posisi X (m)','iX',o.x,'type="number" step="0.05"')}${fld('Posisi Y (m)','iY',o.y,'type="number" step="0.05"')}</div>`;
@@ -631,8 +724,8 @@ function buildInspector(){
   const bind=(id,fn)=>{const e=$('#'+id);if(!e)return;e.addEventListener('input',()=>{fn(e.value);render()});e.addEventListener('change',commit)};
   if(o.type){
     $('#iType').addEventListener('change',e=>{o.type=e.target.value;o.tipe='';commit();render();buildInspector()});
-    const tp=$('#iTipe'); if(tp) tp.addEventListener('change',e=>{o.tipe=e.target.value;commit();render()});
-    bind('iCh',v=>o.ch=Math.max(0,Math.round(num(v,0))));bind('iDim',v=>o.dim=v);bind('iNote',v=>o.note=v);
+    const tp=$('#iTipe'); if(tp) tp.addEventListener('change',e=>{o.tipe=e.target.value;commit();render();buildInspector()});
+    bind('iCh',v=>o.ch=Math.max(0,Math.round(num(v,0))));bind('iDim',v=>o.dim=v);bind('iWatt',v=>{if(v===''||v==null) delete o.watt; else o.watt=Math.max(0,Math.round(num(v,0)))});bind('iNote',v=>o.note=v);
     bindRng('iSz',v=>o.size=v);bind('iRot',v=>o.rot=num(v,0));bind('iThr',v=>o.throw=Math.max(0.5,num(v,3)));
     bind('iX',v=>o.x=num(v,o.x));bind('iY',v=>o.y=num(v,o.y));
     el.querySelectorAll('.sw').forEach(b=>b.addEventListener('click',()=>{o.gel=b.dataset.gel;commit();render();buildInspector()}));
@@ -779,7 +872,38 @@ function finishMarq(d){
   if(ids.length&&tool==='marquee') setTool('select');
   render(); buildInspector();
 }
+/* Gestur sentuh: cubit untuk zoom, dua jari untuk menggeser kanvas */
+const ptrs=new Map(); let pinch=null, pd=null;
+function cancelFinger(){
+  const changed=!!pd&&(undo.length!==pd.undoLen||cur!==pd.cur);
+  const wasAction=!!drag&&drag.m!=='pan';
+  drag=null; draft=null; marq=null; ghost=null; cv.classList.remove('panning');
+  if(pd&&(changed||wasAction)){
+    restore(pd.cur); undo.length=pd.undoLen; redo=pd.redo; updUndo();
+    if(tool!==pd.tool) setTool(pd.tool,pd.armType);
+  }
+  render(); buildInspector();
+}
+function pinchStart(){
+  cancelFinger();
+  const [a,b]=[...ptrs.values()], r=cv.getBoundingClientRect(), mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+  pinch={v0:{...view},r,d0:Math.max(10,Math.hypot(a.x-b.x,a.y-b.y)),
+    wx:view.x+(mid.x-r.left)*view.w/r.width, wy:view.y+(mid.y-r.top)*view.h/r.height};
+}
+function pinchMove(){
+  const [a,b]=[...ptrs.values()]; if(!b||!pinch) return;
+  const d=Math.max(10,Math.hypot(a.x-b.x,a.y-b.y)), cxm=(a.x+b.x)/2, cym=(a.y+b.y)/2, r=pinch.r;
+  const w0=pinch.v0.w, s=clamp(w0*(pinch.d0/d),0.5,400)/w0, w=w0*s, h=pinch.v0.h*s;
+  view={x:pinch.wx-(cxm-r.left)*w/r.width, y:pinch.wy-(cym-r.top)*h/r.height, w:w, h:h}; applyView();
+}
 cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse') ptrs.clear();
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1) pd={cur:cur,undoLen:undo.length,redo:redo.slice(),tool:tool,armType:armType};
+  if(ptrs.size>=2){ if(!pinch){ try{cv.setPointerCapture(e.pointerId)}catch(x){} pinchStart() } return }
+  onDown(e);
+});
+function onDown(e){
   if(e.button===1||e.button===2) e.preventDefault();
   const p=toWorld(e), t=e.target.closest('[data-id]'), hnd=e.target.getAttribute&&e.target.getAttribute('data-h');
   cv.setPointerCapture(e.pointerId);
@@ -798,8 +922,10 @@ cv.addEventListener('pointerdown',e=>{
   if(e.shiftKey){startMarq(p,true);return}
   drag={m:'pan',cx:e.clientX,cy:e.clientY,v0:{...view},moved:false};
   cv.classList.add('panning');
-});
+}
 cv.addEventListener('pointermove',e=>{
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch){pinchMove();return}
   const p=toWorld(e); $('#stPos').textContent=`${fmt(p.x)} , ${fmt(p.y)} m`;
   if(tool==='lamp'&&!drag){ghost={type:armType,x:snapV(p.x),y:snapV(p.y),rot:0};const nb=nearBar(p.x,p.y,0.45);if(nb){ghost.x=nb.x;ghost.y=nb.y;if(nb.bar.y1>S.stage.d+0.5)ghost.rot=180}render();return}
   if(!drag) return;
@@ -852,8 +978,15 @@ function endDrag(){
   else if(d.m==='move'){ if(d.moved) commit(); else render(); buildInspector() }
   else { if(d.changed) commit(); buildInspector() }
 }
-cv.addEventListener('pointerup',endDrag);
-cv.addEventListener('pointercancel',endDrag);
+function onUp(e){
+  ptrs.delete(e.pointerId);
+  if(pinch){ if(ptrs.size<2) pinch=null; return }
+  endDrag();
+}
+cv.addEventListener('pointerup',onUp);
+cv.addEventListener('pointercancel',onUp);
+window.addEventListener('blur',()=>{ptrs.clear();pinch=null});
+['gesturestart','gesturechange','gestureend'].forEach(t=>cv.addEventListener(t,e=>e.preventDefault()));
 cv.addEventListener('pointerleave',()=>{if(ghost){ghost=null;render()}});
 cv.addEventListener('wheel',e=>{e.preventDefault();const p=toWorld(e);zoomAt(e.deltaY>0?1.12:1/1.12,p.x,p.y)},{passive:false});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
@@ -875,7 +1008,7 @@ function syncControls(){
   {const lb=lblOf();$('#lbBackTxt').value=lb.back.text;$('#lbBackShow').checked=!!lb.back.show;$('#lbBackSz').value=lb.back.size;$('#lbEdgeTxt').value=lb.edge.text;$('#lbEdgeShow').checked=!!lb.edge.show;$('#lbEdgeSz').value=lb.edge.size;$('#lbAudTxt').value=lb.aud.text;$('#lbAudShow').checked=!!lb.aud.show;$('#lbAudSz').value=lb.aud.size;$('#lbClTxt').value=lb.cl.text;$('#lbClShow').checked=!!lb.cl.show;$('#lbClSz').value=lb.cl.size}
   $('#gridSz').value=S.opt.gridSize||1; refreshLampPalette(); buildNameEd();
   $('#stW').value=S.stage.w;$('#stD').value=S.stage.d;$('#snap').value=String(S.opt.snap);$('#sym').value=S.opt.sym;
-  $('#oDup').checked=S.opt.dupMark!==false;$('#oGrid').checked=S.opt.grid;$('#oBeam').checked=S.opt.beams;$('#oCh').checked=S.opt.ch;$('#oBarNames').checked=!!S.opt.barNames;
+  $('#oDup').checked=S.opt.dupMark!==false;$('#pwCap').value=S.opt.dimCap==null?2000:S.opt.dimCap;$('#pwSup').value=S.opt.supply||0;$('#oGrid').checked=S.opt.grid;$('#oBeam').checked=S.opt.beams;$('#oCh').checked=S.opt.ch;$('#oBarNames').checked=!!S.opt.barNames;
   $('#dBlok').value=S.doc.judulBlok==null?'DENAH TATA CAHAYA':S.doc.judulBlok;$('#dProd').value=S.doc.produksi;$('#dVenue').value=S.doc.venue;$('#dDes').value=S.doc.perancang;$('#dDate').value=S.doc.tanggal;$('#dNo').value=S.doc.nomor;
 }
 function bindInput(id,fn,doFit){const e=$('#'+id);e.addEventListener('input',()=>{fn(e);render()});e.addEventListener('change',()=>{commit();if(doFit)fit()})}
@@ -897,7 +1030,7 @@ $('#nameEd').addEventListener('input',e=>{
 });
 $('#nameEd').addEventListener('change',commit);
 $('#nameEd').addEventListener('click',e=>{if(e.target.id==='bNamesReset'){S.names={};commit();buildNameEd();refreshLampPalette();buildInspector()}});
-bindInput('oDup',e=>{S.opt.dupMark=e.checked});bindInput('oGrid',e=>{S.opt.grid=e.checked});bindInput('oBeam',e=>{S.opt.beams=e.checked});bindInput('oCh',e=>{S.opt.ch=e.checked});bindInput('oBarNames',e=>{S.opt.barNames=e.checked});
+bindInput('oDup',e=>{S.opt.dupMark=e.checked});bindInput('pwCap',e=>{S.opt.dimCap=Math.max(0,num(e.value,2000))});bindInput('pwSup',e=>{S.opt.supply=Math.max(0,num(e.value,0))});bindInput('oGrid',e=>{S.opt.grid=e.checked});bindInput('oBeam',e=>{S.opt.beams=e.checked});bindInput('oCh',e=>{S.opt.ch=e.checked});bindInput('oBarNames',e=>{S.opt.barNames=e.checked});
 bindInput('dProdFont',e=>{S.doc.fontJudul=e.value});bindInput('dProdSz',e=>{S.doc.sizeJudul=clamp(num(e.value,0),0,80)});
 bindInput('dVenueFont',e=>{S.doc.fontTempat=e.value});bindInput('dVenueSz',e=>{S.doc.sizeTempat=clamp(num(e.value,0),0,80)});
 bindInput('dBlok',e=>{S.doc.judulBlok=e.value});bindInput('dProd',e=>{S.doc.produksi=e.value});bindInput('dVenue',e=>{S.doc.venue=e.value});bindInput('dDes',e=>{S.doc.perancang=e.value});
@@ -906,7 +1039,7 @@ bindInput('dDate',e=>{S.doc.tanggal=e.value});bindInput('dNo',e=>{S.doc.nomor=e.
 $('#bUndo').onclick=doUndo;$('#bRedo').onclick=doRedo;
 $('#bNew').onclick=()=>{if(!S.lamps.length&&!S.bars.length&&!S.texts.length){toast('Kanvas sudah kosong.');return}resetDoc(blank());toast('Proyek baru dimulai. Tekan Urungkan jika salah.')};
 $('#bSample').onclick=()=>resetDoc(sample());
-$('#bChNum').onclick=renumber;$('#bTpl').onclick=()=>applyTemplate($('#tplSel').value);$('#xCsv').onclick=exportCsv;
+$('#bChNum').onclick=renumber;$('#bDimFill').onclick=fillDim;$('#oAuto').addEventListener('change',e=>setAuto(e.target.checked));$('#bTpl').onclick=()=>applyTemplate($('#tplSel').value);$('#xCsv').onclick=exportCsv;
 $('#xPng').onclick=()=>exportKind('png');$('#xPdf').onclick=()=>exportKind('pdf');$('#xSvg').onclick=()=>exportKind('svg');
 $('#bSave').onclick=()=>saveOut(slug()+'.json',JSON.stringify(S,null,1));
 $('#bOpen').onclick=()=>$('#fOpen').click();
@@ -914,8 +1047,7 @@ $('#fOpen').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=()=>{try{
-    const d=JSON.parse(r.result); if(!d||!d.stage||!Array.isArray(d.lamps)||!Array.isArray(d.bars)) throw 0;
-    const n=Object.assign(blank(),d); n.opt=Object.assign(blank().opt,d.opt||{}); n.doc=Object.assign(blank().doc,d.doc||{}); n.texts=d.texts||[];
+    const n=loadProject(JSON.parse(r.result));
     resetDoc(n); toast('Proyek dibuka.');
   }catch(x){toast('Berkas bukan proyek MATAPLOT yang valid.')}};
   r.readAsText(f); e.target.value='';
@@ -956,6 +1088,12 @@ function init(){
   cur=JSON.stringify(S); undo=[]; redo=[];
   fillFonts(); fillTemplates(); buildPalette(); syncControls(); setTool('select'); buildInspector(); updUndo();
   requestAnimationFrame(()=>{fit();render()});
+  let pref=null; try{pref=JSON.parse(lsGet(AK_PREF)||'null')}catch(e){}
+  autoOn=!!(pref&&pref.auto); $('#oAuto').checked=autoOn;
+  if(autoOn){
+    let saved=null; try{saved=JSON.parse(lsGet(AK_STATE)||'null')}catch(e){}
+    if(saved&&hasContent(saved.s)) askRestore(saved); else autoReady=true;
+  }
 }
 init();
 })();

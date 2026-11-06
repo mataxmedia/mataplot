@@ -18,6 +18,8 @@
     <button class="btn" id="bSave">Simpan proyek</button>
     <button class="btn" id="bOpen">Buka proyek</button>
     <input type="file" id="fOpen" accept=".json,application/json" hidden>
+    <label class="chk auto" title="Menyimpan salinan proyek di peramban ini. Tidak menggantikan tombol Simpan proyek."><input type="checkbox" id="oAuto"><span>Simpan otomatis</span></label>
+    <span id="autoNote"></span>
   </div>
 </header>
 
@@ -45,6 +47,16 @@
       <label class="chk"><input type="checkbox" id="oDup"><span>Tandai kanal ganda di gambar</span></label>
       <p class="hint" id="chDup"></p>
       <p class="hint">Dalam satu bottom, lampu diurut kiri ke kanan menurut tampilan layar. Kanal ganda boleh disengaja, misalnya dua lampu satu dimmer.</p>
+    </section>
+    <section class="panel">
+      <h2>Daya</h2>
+      <div class="row">
+        <div class="field"><label for="pwCap">Kapasitas per dimmer (W)</label><input type="number" id="pwCap" min="0" step="100"></div>
+        <div class="field"><label for="pwSup">Batas total (W)</label><input type="number" id="pwSup" min="0" step="100"></div>
+      </div>
+      <button class="btn" id="bDimFill">Isi dimmer dari kanal</button>
+      <div class="pw-box" id="pwBox"></div>
+      <p class="hint">Daya dibaca dari nama tipe lampu (misalnya 650 W atau 12x10 W), atau memakai nilai bawaan jenis lampu. Ubah per lampu lewat kolom Daya di Properti. Batas total 0 berarti tanpa batas. Perkiraan arus memakai 220 V.</p>
     </section>
     <section class="panel">
       <h2>Template panggung</h2>
@@ -90,7 +102,7 @@
       <button class="btn" id="zOut" title="Perkecil" aria-label="Perkecil">&minus;</button>
       <button class="btn" id="zFit" title="Sesuaikan tampilan" aria-label="Sesuaikan tampilan">&#9635;</button>
     </div>
-    <div class="status"><span>Posisi <b id="stPos">&ndash;</b></span><span>Lampu <b id="stLamps">0</b></span><span>Bottom <b id="stBars">0</b></span><span id="stDup"></span><span id="stSel"></span></div>
+    <div class="status"><span>Posisi <b id="stPos">&ndash;</b></span><span>Lampu <b id="stLamps">0</b></span><span>Bottom <b id="stBars">0</b></span><span id="stDup"></span><span>Daya <b id="stPw">0 W</b></span><span id="stSel"></span></div>
   </section>
 
   <aside class="col right">
